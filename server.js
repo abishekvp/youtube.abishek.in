@@ -3,7 +3,13 @@ import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
-import { Innertube, ClientType } from 'youtubei.js';
+import {
+  resolveMediaInfo,
+  extractYoutubeId,
+  getVisionClient,
+  getVrClient,
+  checkYtDlpAvailable
+} from './extractors/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +26,7 @@ const cache = new Map();
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
 function getCached(key) {
+  if (!key) return null;
   const item = cache.get(key);
   if (!item) return null;
   if (Date.now() > item.expiresAt) {
@@ -30,261 +37,27 @@ function getCached(key) {
 }
 
 function setCache(key, data) {
+  if (!key) return;
   cache.set(key, {
     data,
     expiresAt: Date.now() + CACHE_TTL_MS
   });
 }
 
-// In-memory multi-client instances
-let ytVision = null;
-let ytVr = null;
-
-async function getVisionClient() {
-  if (!ytVision) {
-    ytVision = await Innertube.create({ client_type: ClientType.VISIONOS });
-  }
-  return ytVision;
-}
-
-async function getVrClient() {
-  if (!ytVr) {
-    ytVr = await Innertube.create({ client_type: ClientType.ANDROID_VR });
-  }
-  return ytVr;
-}
-
-/**
- * Extract YouTube 11-char Video ID from any URL format
- */
-function extractVideoId(input) {
-  if (!input) return null;
-  const str = input.trim();
-  const patterns = [
-    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/|live\/)|(?:\?|&)v=)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/
-  ];
-  for (const regex of patterns) {
-    const match = str.match(regex);
-    if (match) return match[1];
-  }
-  return null;
-}
-
-/**
- * Format duration seconds into hh:mm:ss or mm:ss
- */
-function formatDuration(seconds) {
-  if (!seconds || isNaN(seconds)) return '0:00';
-  const sec = Math.floor(seconds);
-  const hrs = Math.floor(sec / 3600);
-  const mins = Math.floor((sec % 3600) / 60);
-  const remainingSecs = sec % 60;
-  const padSec = remainingSecs < 10 ? '0' + remainingSecs : remainingSecs;
-  if (hrs > 0) {
-    const padMin = mins < 10 ? '0' + mins : mins;
-    return `${hrs}:${padMin}:${padSec}`;
-  }
-  return `${mins}:${padSec}`;
-}
-
 /**
  * Sanitize filename for safe Content-Disposition headers
  */
-function sanitizeFilename(filename, extension = '') {
+export function sanitizeFilename(filename, extension = '') {
   let clean = filename
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 120);
-  if (!clean) clean = 'youtube_download';
+  if (!clean) clean = 'streamflow_download';
   if (extension && !clean.toLowerCase().endsWith('.' + extension.toLowerCase())) {
     clean += '.' + extension;
   }
   return clean;
-}
-
-/**
- * Fetch video info merging VISIONOS and ANDROID_VR to capture ALL formats
- */
-async function fetchVideoInfo(videoId) {
-  const cached = getCached(videoId);
-  if (cached) return cached;
-
-  const [visionClient, vrClient] = await Promise.all([
-    getVisionClient(),
-    getVrClient()
-  ]);
-
-  const [visionRes, vrRes] = await Promise.allSettled([
-    visionClient.getBasicInfo(videoId),
-    vrClient.getBasicInfo(videoId)
-  ]);
-
-  const basicInfoVision = visionRes.status === 'fulfilled' ? visionRes.value : null;
-  const basicInfoVr = vrRes.status === 'fulfilled' ? vrRes.value : null;
-
-  if (!basicInfoVision && !basicInfoVr) {
-    const err = visionRes.reason || vrRes.reason || new Error('Video unavailable');
-    throw err;
-  }
-
-  const primaryInfo = basicInfoVision || basicInfoVr;
-  const b = primaryInfo.basic_info || {};
-  const durationSec = b.duration || 0;
-
-  // Merge formats from both clients to capture all qualities (8K, 4K, 1080p, 720p, Opus, AAC, 384k)
-  const formatsMap = new Map();
-
-  if (basicInfoVr) {
-    const vrAll = [
-      ...(basicInfoVr.streaming_data?.formats || []),
-      ...(basicInfoVr.streaming_data?.adaptive_formats || [])
-    ];
-    for (const f of vrAll) {
-      if (f.itag && !formatsMap.has(f.itag)) formatsMap.set(f.itag, f);
-    }
-  }
-
-  if (basicInfoVision) {
-    const visionAll = [
-      ...(basicInfoVision.streaming_data?.formats || []),
-      ...(basicInfoVision.streaming_data?.adaptive_formats || [])
-    ];
-    for (const f of visionAll) {
-      if (f.itag) formatsMap.set(f.itag, f);
-    }
-  }
-
-  const allMergedFormats = [...formatsMap.values()];
-
-  // 1. Process Audio formats (provide all available bitrates and codecs)
-  const rawAudio = allMergedFormats.filter(f => f.has_audio && !f.has_video);
-  const audioFormats = rawAudio.map(f => {
-    const isM4A = f.mime_type?.includes('mp4') || f.mime_type?.includes('m4a');
-    const isOpus = f.mime_type?.includes('opus');
-    const ext = isM4A ? 'm4a' : 'webm';
-    const bitrateKbps = Math.round((f.bitrate || 0) / 1000);
-    const sizeBytes = f.content_length ? parseInt(f.content_length, 10) : (f.bitrate && durationSec ? Math.round((f.bitrate * durationSec) / 8) : 0);
-    const sizeMB = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(1) : null;
-
-    let qualityLabel = 'Standard Audio';
-    if (bitrateKbps >= 300) qualityLabel = `Ultra High Fidelity (${bitrateKbps}k Studio)`;
-    else if (bitrateKbps >= 180) qualityLabel = `Studio Master (${bitrateKbps}k)`;
-    else if (bitrateKbps >= 120) qualityLabel = `High Fidelity (${bitrateKbps}k)`;
-    else if (bitrateKbps >= 70) qualityLabel = `Standard Audio (${bitrateKbps}k)`;
-    else qualityLabel = `Data Saver (${bitrateKbps}k)`;
-
-    let codecName = isM4A ? 'AAC LC' : (isOpus ? 'Opus' : 'Audio');
-    if (f.mime_type?.includes('mp4a.40.5')) codecName = 'AAC HE';
-    if (f.mime_type?.includes('ac-3')) codecName = 'AC-3 Surround';
-    if (f.mime_type?.includes('ec-3')) codecName = 'E-AC-3 Dolby';
-
-    return {
-      itag: f.itag,
-      format: ext,
-      mimeType: f.mime_type,
-      codec: codecName,
-      bitrate: bitrateKbps,
-      sampleRate: f.audio_sample_rate || 44100,
-      channels: f.audio_channels || 2,
-      qualityLabel,
-      sizeBytes,
-      sizeFormatted: sizeMB ? `${sizeMB} MB` : 'Dynamic stream',
-      hasAudio: true,
-      hasVideo: false,
-      isProgressive: false
-    };
-  }).sort((a, b) => b.bitrate - a.bitrate);
-
-  // 2. Process Progressive video formats (video + audio combined natively)
-  const combinedList = allMergedFormats.filter(f => f.has_video && f.has_audio).map(f => {
-    const sizeBytes = f.content_length ? parseInt(f.content_length, 10) : (f.bitrate && durationSec ? Math.round((f.bitrate * durationSec) / 8) : 0);
-    const sizeMB = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(1) : null;
-    const isMp4 = f.mime_type?.includes('mp4');
-
-    return {
-      itag: f.itag,
-      format: isMp4 ? 'mp4' : 'webm',
-      quality: f.quality_label || f.quality || '360p',
-      fps: f.fps || 30,
-      bitrate: Math.round((f.bitrate || 0) / 1000),
-      mimeType: f.mime_type,
-      sizeBytes,
-      sizeFormatted: sizeMB ? `${sizeMB} MB` : 'Dynamic stream',
-      hasAudio: true,
-      hasVideo: true,
-      isProgressive: true
-    };
-  });
-
-  // 3. Process Adaptive video formats (8K, 4K, 2K, 1080p, 720p, etc.)
-  const rawVideo = allMergedFormats.filter(f => f.has_video);
-  const videoFormats = rawVideo.map(f => {
-    const isMp4 = f.mime_type?.includes('mp4');
-    const ext = isMp4 ? 'mp4' : 'webm';
-    const sizeBytes = f.content_length ? parseInt(f.content_length, 10) : (f.bitrate && durationSec ? Math.round((f.bitrate * durationSec) / 8) : 0);
-    const sizeMB = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(1) : null;
-    const height = f.height || 0;
-    const rawLabel = f.quality_label || f.quality || `${height}p`;
-
-    // Categorized label
-    let resolutionTier = `${height || 720}p`;
-    if (height >= 4300 || rawLabel.includes('4320')) resolutionTier = '8K Ultra HD';
-    else if (height >= 2100 || rawLabel.includes('2160')) resolutionTier = '4K Ultra HD';
-    else if (height >= 1400 || rawLabel.includes('1440')) resolutionTier = '2K Quad HD';
-    else if (height >= 1000 || rawLabel.includes('1080')) resolutionTier = '1080p Full HD';
-    else if (height >= 700 || rawLabel.includes('720')) resolutionTier = '720p HD';
-    else if (height >= 450 || rawLabel.includes('480')) resolutionTier = '480p';
-    else if (height >= 350 || rawLabel.includes('360')) resolutionTier = '360p';
-    else if (height >= 230 || rawLabel.includes('240')) resolutionTier = '240p';
-    else if (height > 0) resolutionTier = '144p';
-
-    let codecName = 'H.264 / AVC';
-    if (f.mime_type?.includes('av01')) codecName = 'AV1';
-    else if (f.mime_type?.includes('vp9')) codecName = 'VP9';
-
-    return {
-      itag: f.itag,
-      format: ext,
-      quality: rawLabel,
-      resolutionTier,
-      codec: codecName,
-      height,
-      width: f.width || 0,
-      fps: f.fps || 30,
-      bitrate: Math.round((f.bitrate || 0) / 1000),
-      mimeType: f.mime_type,
-      sizeBytes,
-      sizeFormatted: sizeMB ? `${sizeMB} MB` : 'Dynamic stream',
-      hasAudio: !!f.has_audio,
-      hasVideo: true,
-      isProgressive: !!(f.has_video && f.has_audio)
-    };
-  }).sort((a, b) => (b.height || 0) - (a.height || 0) || (b.fps || 0) - (a.fps || 0) || b.bitrate - a.bitrate);
-
-  // Highest quality thumbnail
-  const thumbnails = b.thumbnail || [];
-  const bestThumb = thumbnails.length > 0 ? thumbnails[thumbnails.length - 1].url : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-
-  const payload = {
-    videoId,
-    title: b.title || 'YouTube Video',
-    author: b.author || 'Unknown Creator',
-    channelUrl: b.channel_url || '',
-    duration: formatDuration(durationSec),
-    durationSeconds: durationSec,
-    viewCount: b.view_count ? Number(b.view_count).toLocaleString() : 'N/A',
-    thumbnail: bestThumb,
-    description: b.short_description || '',
-    audioFormats,
-    progressiveFormats: combinedList,
-    videoFormats,
-    totalFormats: audioFormats.length + combinedList.length + videoFormats.length
-  };
-
-  setCache(videoId, payload);
-  return payload;
 }
 
 // ---------------- API ROUTES ----------------
@@ -292,10 +65,20 @@ async function fetchVideoInfo(videoId) {
 /**
  * API Root
  */
-app.get('/api', (req, res) => {
+app.get('/api', async (req, res) => {
+  const ytdlp = await checkYtDlpAvailable();
   res.json({
     status: 'ok',
-    message: 'YouTube Video & Audio Downloader API is running',
+    message: 'StreamFlow Multi-Resource Video & Audio Downloader API is running',
+    supportedPlatforms: [
+      'YouTube (8K, 4K, 1080p, Audio up to 384k)',
+      'TikTok (Watermark-Free HD MP4, MP3 Audio)',
+      'Twitter / X (1080p, 720p, 480p MP4)',
+      'Vimeo (Full HD Progressive Streams)',
+      'Direct Media Links (.mp4, .webm, .mkv, .mov, .mp3, .m4a)',
+      'HTML5 Web Video & OpenGraph Scraper',
+      ytdlp ? 'Universal yt-dlp Extractor Active' : 'Native High-Speed Extractor Active'
+    ],
     endpoints: ['/api/health', '/api/info', '/api/stream']
   });
 });
@@ -303,36 +86,42 @@ app.get('/api', (req, res) => {
 /**
  * Health check
  */
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const ytdlp = await checkYtDlpAvailable();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     inMemoryOnly: true,
     localFileSystemUsage: 'strictly_zero',
-    cacheSize: cache.size
+    cacheSize: cache.size,
+    ytDlpAvailable: ytdlp
   });
 });
 
 /**
- * Video Information Endpoint
+ * Universal Media Information Endpoint
+ * Supports YouTube, TikTok, Twitter/X, Vimeo, Direct Media, and Web Video
  */
 app.get('/api/info', async (req, res) => {
   try {
     const url = req.query.url;
     if (!url) {
-      return res.status(400).json({ error: 'Please provide a YouTube URL or Video ID' });
+      return res.status(400).json({ error: 'Please provide a video URL or ID' });
     }
 
-    const videoId = extractVideoId(url);
-    if (!videoId) {
-      return res.status(400).json({ error: 'Invalid YouTube URL or ID format. Please check the link.' });
-    }
+    const cleanUrl = url.trim();
+    const cached = getCached(cleanUrl);
+    if (cached) return res.json(cached);
 
-    const info = await fetchVideoInfo(videoId);
+    const info = await resolveMediaInfo(cleanUrl);
+
+    setCache(cleanUrl, info);
+    if (info.videoId) setCache(info.videoId, info);
+
     res.json(info);
   } catch (err) {
-    console.error('[API /api/info Error]:', err);
-    const cleanMsg = err.info?.reason || err.message || 'Failed to fetch YouTube video details';
+    console.error('[API /api/info Error]:', err.message);
+    const cleanMsg = err.message || 'Failed to fetch video details';
     res.status(500).json({
       error: cleanMsg,
       details: cleanMsg
@@ -341,8 +130,8 @@ app.get('/api/info', async (req, res) => {
 });
 
 /**
- * Direct In-Memory Media Streaming Endpoint
- * Pipes media chunks directly from YouTube CDN to client HTTP response stream.
+ * Direct In-Memory Media Streaming & Proxy Endpoint
+ * Pipes media chunks directly from upstream CDN to client HTTP response stream.
  * ZERO local file system usage. ZERO local process execution.
  */
 app.get('/api/stream', async (req, res) => {
@@ -352,12 +141,72 @@ app.get('/api/stream', async (req, res) => {
   });
 
   try {
-    const { videoId, itag, download, filename } = req.query;
-    if (!videoId || !itag) {
-      return res.status(400).send('Missing videoId or itag parameter');
+    const { videoId, itag, url, platform, download, filename } = req.query;
+
+    // PATH A: External Platform Stream (TikTok, Twitter, Vimeo, Direct, etc.)
+    if (url) {
+      const targetUrl = decodeURIComponent(url);
+      const upstreamHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+      };
+
+      if (platform === 'tiktok') {
+        upstreamHeaders['Referer'] = 'https://www.tiktok.com/';
+      } else if (platform === 'twitter') {
+        upstreamHeaders['Referer'] = 'https://x.com/';
+      } else if (platform === 'vimeo') {
+        upstreamHeaders['Referer'] = 'https://vimeo.com/';
+      }
+
+      if (req.headers.range) {
+        upstreamHeaders['Range'] = req.headers.range;
+      }
+
+      const upstream = await fetch(targetUrl, {
+        headers: upstreamHeaders
+      });
+
+      if (!upstream.ok && upstream.status !== 206) {
+        throw new Error(`Upstream media source returned status ${upstream.status}`);
+      }
+
+      const contentType = upstream.headers.get('content-type') ||
+        (targetUrl.includes('.mp3') ? 'audio/mpeg' : (targetUrl.includes('.m4a') ? 'audio/mp4' : 'video/mp4'));
+      const contentLength = upstream.headers.get('content-length');
+      const contentRange = upstream.headers.get('content-range');
+
+      res.status(upstream.status);
+      res.setHeader('Content-Type', contentType);
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      if (contentRange) res.setHeader('Content-Range', contentRange);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      if (download === '1' || download === 'true') {
+        const isAudio = contentType.includes('audio') || targetUrl.includes('.mp3') || targetUrl.includes('.m4a');
+        const defaultExt = isAudio ? 'mp3' : 'mp4';
+        const safeName = sanitizeFilename(filename || `media_${Date.now()}`, defaultExt);
+        const encodedName = encodeURIComponent(safeName);
+        res.setHeader('Content-Disposition', `attachment; filename="${safeName.replace(/"/g, '')}"; filename*=UTF-8''${encodedName}`);
+      }
+
+      const nodeStream = Readable.fromWeb(upstream.body);
+      nodeStream.on('error', (err) => {
+        if (err.name !== 'AbortError' && !isClosed) {
+          console.warn('[External Stream Error]:', err.message);
+        }
+      });
+
+      nodeStream.pipe(res);
+      return;
     }
 
-    const cleanVideoId = extractVideoId(videoId);
+    // PATH B: YouTube Innertube In-Memory Stream
+    if (!videoId || !itag) {
+      return res.status(400).send('Missing videoId/itag or url parameter');
+    }
+
+    const cleanVideoId = extractYoutubeId(videoId);
     if (!cleanVideoId) {
       return res.status(400).send('Invalid videoId');
     }
@@ -372,7 +221,6 @@ app.get('/api/stream', async (req, res) => {
     let clientToUse = visionClient;
     try {
       basicInfo = await visionClient.getBasicInfo(cleanVideoId);
-      // Check if format is in vision client
       const hasItag = [...(basicInfo.streaming_data?.formats || []), ...(basicInfo.streaming_data?.adaptive_formats || [])].some(f => f.itag === itagNum);
       if (!hasItag) {
         clientToUse = vrClient;
@@ -430,8 +278,7 @@ app.get('/api/stream', async (req, res) => {
       return;
     }
 
-    // 2. Full stream request (Trimmer in-memory buffer fetch / Browser Download)
-    // Stream in sequential 1MB burst chunks to bypass YouTube playback throttling
+    // 2. Full stream request
     if (streamUrl && totalSize > 0) {
       res.status(200);
       res.setHeader('Content-Type', contentType);
@@ -500,9 +347,10 @@ app.get('/api/stream', async (req, res) => {
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`\n======================================================`);
-    console.log(`🚀 YouTube In-Memory Video & Audio Downloader Running`);
+    console.log(`🚀 StreamFlow Multi-Resource Video & Audio Downloader Running`);
     console.log(`🌐 Server URL: http://localhost:${PORT}`);
     console.log(`🛡️ Architecture: 100% In-Memory Streaming (Zero Disk Files)`);
+    console.log(`📺 Supported: YouTube, TikTok, Twitter/X, Vimeo, Direct Media & More`);
     console.log(`======================================================\n`);
   });
 }

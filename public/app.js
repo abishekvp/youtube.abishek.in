@@ -25,6 +25,10 @@ const previewToggleBtn = document.getElementById('previewToggleBtn');
 const playerContainer = document.getElementById('playerContainer');
 const previewVideo = document.getElementById('previewVideo');
 const previewAudio = document.getElementById('previewAudio');
+const platformSourceBadge = document.getElementById('platformSourceBadge');
+const platformBadgeIcon = document.getElementById('platformBadgeIcon');
+const platformBadgeText = document.getElementById('platformBadgeText');
+const sourcePills = document.querySelectorAll('.source-pill');
 
 // Tabs & Grids
 const tabButtons = document.querySelectorAll('.tab-btn');
@@ -124,6 +128,29 @@ function setupEventListeners() {
     e.preventDefault();
     const url = urlInput.value.trim();
     if (url) fetchVideo(url);
+  });
+
+  // Source Selector Pills
+  sourcePills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      sourcePills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const platform = pill.dataset.platform;
+      if (platform === 'youtube') {
+        urlInput.placeholder = 'Paste YouTube Video, Shorts or Music link here...';
+      } else if (platform === 'tiktok') {
+        urlInput.placeholder = 'Paste TikTok video or music link here...';
+      } else if (platform === 'twitter') {
+        urlInput.placeholder = 'Paste Twitter / X tweet video link here...';
+      } else if (platform === 'vimeo') {
+        urlInput.placeholder = 'Paste Vimeo video link here...';
+      } else if (platform === 'direct') {
+        urlInput.placeholder = 'Paste direct MP4, WebM or audio URL here...';
+      } else {
+        urlInput.placeholder = 'Paste any video link (YouTube, TikTok, Twitter/X, Vimeo, direct MP4)...';
+      }
+      urlInput.focus();
+    });
   });
 
   // Input changes
@@ -433,12 +460,29 @@ async function fetchVideo(url) {
  * Render video info and formats
  */
 function renderVideo(data) {
-  videoThumb.src = data.thumbnail;
-  videoDuration.textContent = data.duration;
-  videoTitle.textContent = data.title;
-  videoAuthor.textContent = data.author;
-  videoViews.textContent = `${data.viewCount} views`;
-  videoDurationMeta.textContent = data.duration;
+  videoThumb.src = data.thumbnail || '';
+  videoDuration.textContent = data.duration || '0:00';
+  videoTitle.textContent = data.title || 'Video';
+  videoAuthor.textContent = data.author || 'Creator';
+  videoViews.textContent = data.viewCount?.includes('view') || data.viewCount?.includes('like') || data.viewCount === 'N/A'
+    ? data.viewCount
+    : `${data.viewCount} views`;
+  videoDurationMeta.textContent = data.duration || '0:00';
+
+  // Platform source badge
+  if (platformSourceBadge) {
+    const platform = data.platform || 'youtube';
+    platformSourceBadge.className = `platform-source-badge platform-badge-${platform}`;
+    if (platformBadgeText) platformBadgeText.textContent = data.platformName || 'Media Stream';
+    if (platformBadgeIcon) {
+      if (platform === 'youtube') platformBadgeIcon.textContent = '🔴';
+      else if (platform === 'tiktok') platformBadgeIcon.textContent = '🎵';
+      else if (platform === 'twitter') platformBadgeIcon.textContent = '🐦';
+      else if (platform === 'vimeo') platformBadgeIcon.textContent = '📽️';
+      else if (platform === 'direct') platformBadgeIcon.textContent = '🌐';
+      else platformBadgeIcon.textContent = '🎬';
+    }
+  }
 
   // Render Audio Formats
   renderAudioFormats(data.audioFormats || []);
@@ -476,8 +520,8 @@ function renderAudioFormats(formats) {
     const isOpus = f.format === 'webm' || (f.codec && f.codec.toLowerCase().includes('opus'));
     const isAAC = f.format === 'm4a' || (f.codec && f.codec.toLowerCase().includes('aac'));
 
-    const streamUrl = `/api/stream?videoId=${currentVideoData.videoId}&itag=${f.itag}`;
-    const downloadUrl = `${streamUrl}&download=1&filename=${encodeURIComponent(currentVideoData.title)}`;
+    const streamUrl = f.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${f.itag}`;
+    const downloadUrl = f.downloadUrl || `${streamUrl}&download=1&filename=${encodeURIComponent(currentVideoData.title)}`;
 
     card.innerHTML = `
       <div class="format-card-top">
@@ -548,8 +592,8 @@ function renderVideoFormats(combined, adaptive) {
     card.className = 'format-card';
     card.style.borderColor = 'rgba(245, 158, 11, 0.4)';
 
-    const streamUrl = `/api/stream?videoId=${currentVideoData.videoId}&itag=${f.itag}`;
-    const downloadUrl = `${streamUrl}&download=1&filename=${encodeURIComponent(currentVideoData.title)}`;
+    const streamUrl = f.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${f.itag}`;
+    const downloadUrl = f.downloadUrl || `${streamUrl}&download=1&filename=${encodeURIComponent(currentVideoData.title)}`;
 
     card.innerHTML = `
       <div class="format-card-top">
@@ -607,8 +651,8 @@ function renderVideoFormats(combined, adaptive) {
     const is1080 = !is8K && !is4K && !is2K && (f.height >= 1000 || f.quality?.includes('1080'));
     const is720 = !is8K && !is4K && !is2K && !is1080 && (f.height >= 700 || f.quality?.includes('720'));
 
-    const streamUrl = `/api/stream?videoId=${currentVideoData.videoId}&itag=${f.itag}`;
-    const downloadUrl = `${streamUrl}&download=1&filename=${encodeURIComponent(currentVideoData.title)}`;
+    const streamUrl = f.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${f.itag}`;
+    const downloadUrl = f.downloadUrl || `${streamUrl}&download=1&filename=${encodeURIComponent(currentVideoData.title)}`;
 
     card.innerHTML = `
       <div class="format-card-top">
@@ -696,9 +740,11 @@ function togglePreviewPlayer() {
     const prog = currentVideoData?.progressiveFormats?.[0];
     const aud = currentVideoData?.audioFormats?.[0];
     if (prog) {
-      playVideoStream(`/api/stream?videoId=${currentVideoData.videoId}&itag=${prog.itag}`);
+      const url = prog.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${prog.itag}`;
+      playVideoStream(url);
     } else if (aud) {
-      playAudioStream(`/api/stream?videoId=${currentVideoData.videoId}&itag=${aud.itag}`);
+      const url = aud.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${aud.itag}`;
+      playAudioStream(url);
     }
   }
 }
@@ -1439,7 +1485,7 @@ async function loadAudioBufferInMemory(silent = false) {
   for (const audioFmt of uniqueCandidates) {
     try {
       trimmerStatus.textContent = `⏳ Fetching ${audioFmt.qualityLabel} into browser RAM...`;
-      const streamUrl = `/api/stream?videoId=${currentVideoData.videoId}&itag=${audioFmt.itag}`;
+      const streamUrl = audioFmt.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${audioFmt.itag}`;
       const response = await fetch(streamUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to stream audio`);
@@ -1752,6 +1798,9 @@ function saveToHistory(data) {
     history = history.filter(item => item.videoId !== data.videoId);
     history.unshift({
       videoId: data.videoId,
+      originalUrl: urlInput.value.trim() || data.channelUrl || '',
+      platform: data.platform || 'youtube',
+      platformName: data.platformName || 'YouTube',
       title: data.title,
       author: data.author,
       thumbnail: data.thumbnail,
@@ -1778,15 +1827,19 @@ function loadHistory() {
     history.forEach(item => {
       const card = document.createElement('div');
       card.className = 'history-card';
+      const platformCls = `platform-badge-${item.platform || 'youtube'}`;
       card.innerHTML = `
         <img class="history-thumb" src="${item.thumbnail}" alt="Thumbnail">
         <div class="history-info">
           <div class="history-title-text">${item.title}</div>
-          <div class="history-sub-text">${item.author} • ${item.duration}</div>
+          <div class="history-sub-text">
+            <span class="history-item-platform ${platformCls}">${item.platformName || 'YouTube'}</span>
+            <span>${item.author} • ${item.duration}</span>
+          </div>
         </div>
       `;
       card.addEventListener('click', () => {
-        urlInput.value = `https://www.youtube.com/watch?v=${item.videoId}`;
+        urlInput.value = item.originalUrl || (item.videoId?.length === 11 ? `https://www.youtube.com/watch?v=${item.videoId}` : item.videoId);
         clearBtn.style.display = 'flex';
         fetchVideo(urlInput.value);
       });
