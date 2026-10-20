@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamFlow - Fast YouTube Video & Audio Downloader</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff0033'><path d='M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z'/></svg>">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+        </div>
+        <span>StreamFlow</span>
+        <span class="brand-badge">Fast &amp; Free</span>
+      </a>
+
+      <div class="nav-actions">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span>Zero-Disk Engine Active</span>
+        </div>
+        <button id="themeToggleBtn" class="icon-btn" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+          <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>100% In-Memory Streaming • No Disk Files</span>
+      </div>
+
+      <h1 class="hero-title">
+        Download YouTube <span class="gradient-text">Video & Audio</span>
+      </h1>
+      <p class="hero-subtitle">
+        Download YouTube videos and audio in the highest quality. Direct pipe streaming from source CDN to your browser with pure memory execution, zero local disk usage, and instant speed.
+      </p>
+
+      <!-- Search Input Card -->
+      <div class="search-card">
+        <form id="searchForm" class="search-form">
+          <div class="input-wrapper">
+            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input 
+              type="text" 
+              id="urlInput" 
+              class="url-input" 
+              placeholder="Paste YouTube Video, Shorts or Music link here..." 
+              autocomplete="off"
+              required
+            >
+            <button type="button" id="clearBtn" class="clear-btn" title="Clear input" style="display: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            <button type="button" id="pasteBtn" class="paste-btn" title="Paste from clipboard">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </button>
+          </div>
+
+          <button type="submit" id="submitBtn" class="submit-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Fetch Formats</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Quick Sample Buttons -->
+      <div class="sample-chips">
+        <span class="chip-label">Try sample:</span>
+        <button class="sample-chip" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+          🎵 Rick Astley (Music)
+        </button>
+        <button class="sample-chip" data-url="https://www.youtube.com/watch?v=aqz-KE-bpKQ">
+          🎬 Big Buck Bunny (4K)
+        </button>
+        <button class="sample-chip" data-url="https://www.youtube.com/watch?v=jNQXAC9IVRw">
+          🐘 Me at the zoo (Classic)
+        </button>
+      </div>
+    </section>
+
+    <!-- Loading State -->
+    <div id="loadingBox" class="loading-box">
+      <div class="spinner"></div>
+      <div class="loading-text">Fetching video details...</div>
+      <div class="loading-subtext">Finding the best available audio and video qualities</div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorBox" class="error-box" style="display: none;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <div id="errorMessage">Unable to fetch video. Please verify the URL.</div>
+    </div>
+
+    <!-- Video Result Card -->
+    <section id="videoCard" class="video-card">
+      <div class="video-header">
+        <div class="thumb-container">
+          <img id="videoThumb" class="video-thumb" src="" alt="Thumbnail">
+          <span id="videoDuration" class="duration-badge">0:00</span>
+        </div>
+
+        <div class="video-meta">
+          <h2 id="videoTitle" class="video-title">Video Title</h2>
+          <div class="channel-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span id="videoAuthor" class="channel-name">Channel</span>
+          </div>
+
+          <div class="meta-stats">
+            <div class="stat-item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span id="videoViews">0 views</span>
+            </div>
+            <div class="stat-item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span id="videoDurationMeta">0:00</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="previewToggleBtn" class="preview-toggle-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Preview Stream</span>
+            </button>
+            <button id="copyTitleBtn" class="icon-btn" title="Copy Title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- In-Memory Preview Player -->
+      <div id="playerContainer" class="player-container">
+        <video id="previewVideo" controls playsinline preload="none" style="display: none;"></video>
+        <audio id="previewAudio" controls preload="none" style="display: none; padding: 12px;"></audio>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="audio">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+          <span>Audio Formats</span>
+          <span id="audioTabCount" class="tab-count">0</span>
+        </button>
+
+        <button class="tab-btn" data-tab="video">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <line x1="2" y1="7" x2="7" y2="7"></line>
+            <line x1="2" y1="17" x2="7" y2="17"></line>
+            <line x1="17" y1="17" x2="22" y2="17"></line>
+            <line x1="17" y1="7" x2="22" y2="7"></line>
+          </svg>
+          <span>Video Formats</span>
+          <span id="videoTabCount" class="tab-count">0</span>
+        </button>
+
+        <button class="tab-btn" data-tab="trimmer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="6" cy="18" r="3"></circle>
+            <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+            <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+            <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+          </svg>
+          <span>Client-Side Audio Trimmer</span>
+          <span class="tag tag-audio" style="font-size: 0.65rem;">Browser RAM</span>
+        </button>
+      </div>
+
+      <!-- Tab Contents -->
+      <div id="audioTab" class="tab-pane active">
+        <div id="audioFormatsGrid" class="format-grid">
+          <!-- Dynamically populated audio cards -->
+        </div>
+      </div>
+
+      <div id="videoTab" class="tab-pane">
+        <div id="videoFormatsGrid" class="format-grid">
+          <!-- Dynamically populated video cards -->
+        </div>
+      </div>
+
+      <!-- In-Memory Audio Trimmer Tab (Runs 100% in client browser memory) -->
+      <div id="trimmerTab" class="tab-pane">
+        <div class="trimmer-box">
+          <div class="trimmer-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; width: 100%;">
+              <div>
+                <h3 class="trimmer-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  <span>Instant Audio Trimmer</span>
+                </h3>
+                <p class="trimmer-subtitle">
+                  Fast and private — trimmed right on your device with no extra waiting.
+                </p>
+              </div>
+              <div class="waveform-badge-pill" id="waveformLoadedBadge">
+                <span class="status-dot-sm"></span>
+                <span id="waveformBadgeText">Waveform Idle</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Timing HUD & Live Playback Monitor -->
+          <div class="audio-timing-hud">
+            <div class="timing-col current-time-col">
+              <span class="timing-label">Current Playback</span>
+              <div class="timing-value-wrap">
+                <span id="trimCurrentPosition" class="timing-digital-display">00:00:000</span>
+                <span id="trimPlayStateIndicator" class="timing-state-badge">READY</span>
+              </div>
+            </div>
+
+            <div class="timing-col">
+              <span class="timing-label">Selection Range</span>
+              <span class="timing-range-display">
+                <span id="timingStartSpan" class="timing-accent">00:00:000</span>
+                <span class="timing-arrow">➔</span>
+                <span id="timingEndSpan" class="timing-accent">00:30:000</span>
+              </span>
+            </div>
+
+            <div class="timing-col">
+              <span class="timing-label">Trimmed Duration</span>
+              <span id="timingSelectedDuration" class="timing-duration-display">00:30:000</span>
+            </div>
+
+            <div class="timing-col">
+              <span class="timing-label">Track Total</span>
+              <span id="timingTotalDuration" class="timing-total-display">00:00:000</span>
+            </div>
+          </div>
+
+          <!-- Interactive Audio Waveform Section -->
+          <div class="waveform-section">
+            <div class="waveform-header">
+              <span class="waveform-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 10v4m4-8v12m4-14v16m4-10v4m4-12v16m4-8v4"/>
+                </svg>
+                <span>Interactive Audio Waveform</span>
+              </span>
+              <span class="waveform-hint">
+                <span class="hint-pulse"></span>
+                <span>Click or drag anywhere on waves to seek & play</span>
+              </span>
+            </div>
+
+            <div class="waveform-wrapper" id="waveformWrapper">
+              <!-- Waveform Canvas -->
+              <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+
+              <!-- Dim overlays for unselected audio portions -->
+              <div id="waveformDimLeft" class="waveform-dim waveform-dim-left"></div>
+              <div id="waveformDimRight" class="waveform-dim waveform-dim-right"></div>
+
+              <!-- Start and End boundary markers on waveform -->
+              <div id="waveformStartMarker" class="waveform-marker waveform-marker-start">
+                <div class="marker-handle" title="Start Time Handle"></div>
+                <span class="marker-tag" id="markerStartTag">00:00</span>
+              </div>
+              <div id="waveformEndMarker" class="waveform-marker waveform-marker-end">
+                <div class="marker-handle" title="End Time Handle"></div>
+                <span class="marker-tag" id="markerEndTag">00:30</span>
+              </div>
+
+              <!-- Playhead scrubber line -->
+              <div id="waveformPlayhead" class="waveform-playhead" style="left: 0%;">
+                <div class="playhead-line"></div>
+                <div class="playhead-knob"></div>
+                <div id="playheadTimeBadge" class="playhead-badge">00:00:000</div>
+                <div id="playheadBottomBadge" class="playhead-badge-bottom">00:00:000</div>
+              </div>
+
+              <!-- Hover cursor guide -->
+              <div id="waveformHoverIndicator" class="waveform-hover-indicator" style="display: none;">
+                <div class="hover-line"></div>
+                <div id="waveformHoverBadge" class="hover-badge">00:00:000</div>
+              </div>
+
+              <!-- Loader overlay -->
+              <div class="waveform-loader" id="waveformLoader">
+                <div class="spinner-sm"></div>
+                <span id="waveformLoaderText">Click "Load Waves" or "Play" to decode audio in RAM</span>
+                <button type="button" id="loadWaveformBtn" class="btn-load-waveform">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  <span>Load Waves</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Time scale ruler under waveform -->
+            <div id="waveformTimeRuler" class="waveform-time-ruler"></div>
+
+            <!-- Current Playback & Real-Time Monitoring Bar on Bottom of Audio Wave -->
+            <div class="waveform-bottom-bar" id="waveformBottomBar">
+              <div class="waveform-bottom-playback">
+                <span class="playback-live-dot" id="waveBottomLiveDot"></span>
+                <span class="wave-bottom-label">CURRENT PLAYBACK:</span>
+                <span id="waveBottomCurrentTime" class="wave-bottom-time">00:00:000</span>
+                <span id="waveBottomStateBadge" class="timing-state-badge">READY</span>
+              </div>
+              <div class="waveform-bottom-meta">
+                <span class="wave-bottom-sub">Selection: <strong id="waveBottomSelectionRange">00:00:000 ➔ 00:30:000</strong> (<span id="waveBottomDuration">00:30:000</span>)</span>
+                <span class="wave-bottom-sep">•</span>
+                <span class="wave-bottom-sub">Total: <strong id="waveBottomTotalTime">00:00:000</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dual Timeline Sliders -->
+          <div class="trimmer-slider-container">
+            <div class="slider-track-wrap">
+              <div class="slider-label-row">
+                <span>Start Point</span>
+                <span id="startTimeDisplay" class="trimmer-time-display">00:00:000</span>
+              </div>
+              <input type="range" id="startSlider" class="range-slider" min="0" max="100" value="0" step="0.001">
+            </div>
+
+            <div class="slider-track-wrap">
+              <div class="slider-label-row">
+                <span>End Point</span>
+                <span id="endTimeDisplay" class="trimmer-time-display">00:30:000</span>
+              </div>
+              <input type="range" id="endSlider" class="range-slider" min="0" max="100" value="30" step="0.001">
+            </div>
+          </div>
+
+          <!-- Precision Time Cards (Manual Typing + Steppers + Granular ms) -->
+          <div class="time-cards-grid">
+            <!-- Start Time Card -->
+            <div class="time-card">
+              <div class="time-card-header">
+                <span class="time-card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  Start Time
+                </span>
+                <span id="startSecBadge" class="time-card-badge">0.000s</span>
+              </div>
+
+              <div class="time-stepper-row">
+                <button type="button" id="stepStartMinus" class="btn-step-large" title="Step Back 1s" aria-label="Decrease start time">−</button>
+                <input type="text" id="startTimeInput" class="time-input-field" value="00:00:000" placeholder="00:00:000" spellcheck="false" autocomplete="off">
+                <button type="button" id="stepStartPlus" class="btn-step-large" title="Step Forward 1s" aria-label="Increase start time">+</button>
+              </div>
+
+              <div class="granular-strip">
+                <div class="granular-label">
+                  <span>Granular Adjustments</span>
+                  <span>Seconds & Milliseconds</span>
+                </div>
+                <button type="button" class="step-chip" data-target="start" data-delta="-5">-5s</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="-1">-1s</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="-0.1">-100ms</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="-0.01">-10ms</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="0.01">+10ms</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="0.1">+100ms</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="1">+1s</button>
+                <button type="button" class="step-chip" data-target="start" data-delta="5">+5s</button>
+                <button type="button" id="setStartToCurrentBtn" class="step-chip chip-jump" title="Set start to player current position">📍 Player Pos</button>
+                <button type="button" id="setStartToZeroBtn" class="step-chip chip-jump" title="Reset start to beginning">⏮ 0:00</button>
+              </div>
+            </div>
+
+            <!-- End Time Card -->
+            <div class="time-card">
+              <div class="time-card-header">
+                <span class="time-card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <polygon points="18 4 18 20 10 12 18 4"></polygon>
+                  </svg>
+                  End Time
+                </span>
+                <span id="endSecBadge" class="time-card-badge">30.000s</span>
+              </div>
+
+              <div class="time-stepper-row">
+                <button type="button" id="stepEndMinus" class="btn-step-large" title="Step Back 1s" aria-label="Decrease end time">−</button>
+                <input type="text" id="endTimeInput" class="time-input-field" value="00:30:000" placeholder="00:30:000" spellcheck="false" autocomplete="off">
+                <button type="button" id="stepEndPlus" class="btn-step-large" title="Step Forward 1s" aria-label="Increase end time">+</button>
+              </div>
+
+              <div class="granular-strip">
+                <div class="granular-label">
+                  <span>Granular Adjustments</span>
+                  <span>Seconds & Milliseconds</span>
+                </div>
+                <button type="button" class="step-chip" data-target="end" data-delta="-5">-5s</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="-1">-1s</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="-0.1">-100ms</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="-0.01">-10ms</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="0.01">+10ms</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="0.1">+100ms</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="1">+1s</button>
+                <button type="button" class="step-chip" data-target="end" data-delta="5">+5s</button>
+                <button type="button" id="setEndToCurrentBtn" class="step-chip chip-jump" title="Set end to player current position">📍 Player Pos</button>
+                <button type="button" id="setEndToEndBtn" class="step-chip chip-jump" title="Set to end of audio">⏭ Audio End</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="trimmer-stats">
+            <div class="trimmer-stat-group">
+              <span style="color: var(--text-muted);">Selected Length:</span>
+              <strong id="trimmerDurationDisplay" class="trimmer-stat-val">00:30:000</strong>
+              <span id="trimmerSecDisplay" style="color: var(--text-secondary); font-size: 0.84rem; font-family: monospace;">(30.000s)</span>
+            </div>
+            <div class="trimmer-quick-seeks">
+              <button type="button" id="seekToStartBtn" class="btn-micro" title="Jump to Selection Start">
+                ⏮ Start
+              </button>
+              <button type="button" id="seekToMiddleBtn" class="btn-micro" title="Jump to Middle of Selection">
+                ⏯ Middle
+              </button>
+              <button type="button" id="seekToEndBtn" class="btn-micro" title="Jump near Selection End">
+                ⏭ End
+              </button>
+            </div>
+            <div class="trimmer-stat-group">
+              <span style="color: var(--text-muted);">Audio Source:</span>
+              <strong id="trimmerSourceBadge" style="color: var(--text-primary);">Original Audio Stream</strong>
+            </div>
+          </div>
+
+          <!-- Format Selection for Trimmed Export -->
+          <div class="trimmer-format-row">
+            <div class="trimmer-control-group">
+              <div class="trimmer-label">
+                <span>Export Audio Format</span>
+                <span id="selectedFormatBadge" class="tag tag-8k">MP3 320 kbps</span>
+              </div>
+              <select id="trimFormatSelect" class="trimmer-select">
+                <optgroup label="MP3 Formats (Universal Compatibility)">
+                  <option value="mp3-320" selected>MP3 • 320 kbps (Ultra High Quality - Recommended)</option>
+                  <option value="mp3-256">MP3 • 256 kbps (Studio Master)</option>
+                  <option value="mp3-192">MP3 • 192 kbps (High Quality)</option>
+                  <option value="mp3-128">MP3 • 128 kbps (Standard Compact)</option>
+                </optgroup>
+                <optgroup label="Lossless Studio Master">
+                  <option value="wav">WAV • 16-bit Lossless PCM (Uncompressed Studio Master)</option>
+                </optgroup>
+                <optgroup label="Modern Formats">
+                  <option value="webm">WebM • Opus Audio (Modern Audiophile)</option>
+                  <option value="m4a">M4A • AAC Audio (Apple & Mobile)</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <div class="trimmer-actions">
+            <button id="trimPlayBtn" class="btn-trim-play">
+              <svg id="trimPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span id="trimPlayText">Play Trimmed Selection</span>
+            </button>
+
+            <button type="button" id="trimPlayFromStartBtn" class="btn-trim-restart" title="Play from the start of trimmed selection">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 4v6h6M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+              </svg>
+              <span>Play from Start</span>
+            </button>
+
+            <button id="trimExportBtn" class="btn-trim-export">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span id="trimExportText">Export Trimmed Audio (.mp3)</span>
+            </button>
+          </div>
+
+          <div id="trimmerStatus" class="trimmer-status"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- History / Recent Section -->
+    <section id="historySection" class="history-section" style="display: none;">
+      <div class="history-header">
+        <h3 class="history-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Recent Queries</span>
+        </h3>
+        <button id="clearHistoryBtn" class="btn-clear-history">Clear History</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+
+    <!-- Architecture Highlights -->
+    <section class="features-section">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <h4 class="feature-title">Pure In-Memory Pipes</h4>
+        <p class="feature-desc">Streams chunk by chunk from YouTube directly to HTTP response buffers without touching local disks.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+        </div>
+        <h4 class="feature-title">Strictly Zero Disk Usage</h4>
+        <p class="feature-desc">Zero temporary files created on server. No file system permissions or disk bloat issues ever.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="6" cy="18" r="3"></circle>
+            <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+            <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+            <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <h4 class="feature-title">Client-Side Trimmer</h4>
+        <p class="feature-desc">Trims and exports audio files entirely inside the browser's Web Audio API memory with zero subprocesses.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <h4 class="feature-title">Adaptive Stream Resilience</h4>
+        <p class="feature-desc">Multi-client Innertube fallback architecture guarantees reliable stream resolution across all video formats.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>StreamFlow • Fast, Free YouTube Video &amp; Audio Downloader</p>
+    </div>
+  </footer>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Client Application Script -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
