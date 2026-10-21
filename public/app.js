@@ -2,6 +2,7 @@ import { audioBufferToWav, audioBufferToMp3, audioBufferToMediaBlob } from './au
 
 // DOM Elements
 const urlInput = document.getElementById('urlInput');
+const inputIconContainer = document.getElementById('inputIconContainer');
 const searchForm = document.getElementById('searchForm');
 const pasteBtn = document.getElementById('pasteBtn');
 const clearBtn = document.getElementById('clearBtn');
@@ -12,6 +13,76 @@ const errorMessage = document.getElementById('errorMessage');
 const videoCard = document.getElementById('videoCard');
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const toastContainer = document.getElementById('toastContainer');
+
+/**
+ * Return crisp, authentic vector brand/platform SVG icons
+ */
+export function getPlatformIconSvg(platform, size = 16) {
+  const p = (platform || '').toLowerCase();
+  if (p === 'youtube') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" class="brand-icon-youtube" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+  }
+  if (p === 'tiktok') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" class="brand-icon-tiktok" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`;
+  }
+  if (p === 'twitter' || p === 'x') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" class="brand-icon-twitter" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+  }
+  if (p === 'vimeo') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" class="brand-icon-vimeo" aria-hidden="true"><path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128 1.591-1.416 2.766-2.172 3.529-2.268 1.814-.194 2.943.953 3.385 3.438.48 2.656.814 4.301 1.002 4.935.617 2.943 1.282 4.409 1.995 4.409.554 0 1.23-.787 2.029-2.361.799-1.574 1.229-2.771 1.29-3.593.107-1.396-.401-2.096-1.526-2.096-.533 0-1.102.122-1.706.368 1.096-3.596 3.197-5.342 6.302-5.238 2.308.077 3.411 1.572 3.308 4.484z"/></svg>`;
+  }
+  if (p === 'instagram') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon-instagram" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>`;
+  }
+  if (p === 'reddit') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" class="brand-icon-reddit" aria-hidden="true"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>`;
+  }
+  if (p === 'direct') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon-direct" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon-link" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+}
+
+/**
+ * Detect platform key from arbitrary input URL
+ */
+function detectUrlPlatform(str) {
+  if (!str) return null;
+  const url = str.trim().toLowerCase();
+  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+  if (url.includes('tiktok.com')) return 'tiktok';
+  if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
+  if (url.includes('vimeo.com')) return 'vimeo';
+  if (url.includes('instagram.com')) return 'instagram';
+  if (url.includes('reddit.com') || url.includes('redd.it')) return 'reddit';
+  if (/^https?:\/\/.*\.(mp4|webm|m4v|mp3|m4a|wav|ogg|flac|aac)(\?.*)?$/i.test(url) || url.startsWith('http://') || url.startsWith('https://')) return 'direct';
+  return null;
+}
+
+/**
+ * Dynamically update the search bar leading icon to match detected URL platform
+ */
+function updateInputIcon(url) {
+  if (!inputIconContainer) return;
+  const platform = detectUrlPlatform(url);
+  if (platform) {
+    inputIconContainer.innerHTML = getPlatformIconSvg(platform, 18);
+    sourcePills.forEach(p => {
+      if (p.dataset.platform === platform) {
+        p.classList.add('active');
+      } else if (p.dataset.platform !== 'all' && p.dataset.platform !== platform) {
+        p.classList.remove('active');
+      }
+    });
+  } else {
+    inputIconContainer.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+    `;
+  }
+}
 
 // Video Details Elements
 const videoThumb = document.getElementById('videoThumb');
@@ -156,11 +227,13 @@ function setupEventListeners() {
   // Input changes
   urlInput.addEventListener('input', () => {
     clearBtn.style.display = urlInput.value ? 'flex' : 'none';
+    updateInputIcon(urlInput.value);
   });
 
   clearBtn.addEventListener('click', () => {
     urlInput.value = '';
     clearBtn.style.display = 'none';
+    updateInputIcon('');
     urlInput.focus();
   });
 
@@ -171,6 +244,7 @@ function setupEventListeners() {
       if (text) {
         urlInput.value = text.trim();
         clearBtn.style.display = 'flex';
+        updateInputIcon(urlInput.value);
         showToast('Pasted link from clipboard', 'info');
         fetchVideo(urlInput.value);
       }
@@ -185,6 +259,7 @@ function setupEventListeners() {
       const url = chip.dataset.url;
       urlInput.value = url;
       clearBtn.style.display = 'flex';
+      updateInputIcon(url);
       fetchVideo(url);
     });
   });
@@ -475,12 +550,7 @@ function renderVideo(data) {
     platformSourceBadge.className = `platform-source-badge platform-badge-${platform}`;
     if (platformBadgeText) platformBadgeText.textContent = data.platformName || 'Media Stream';
     if (platformBadgeIcon) {
-      if (platform === 'youtube') platformBadgeIcon.textContent = '🔴';
-      else if (platform === 'tiktok') platformBadgeIcon.textContent = '🎵';
-      else if (platform === 'twitter') platformBadgeIcon.textContent = '🐦';
-      else if (platform === 'vimeo') platformBadgeIcon.textContent = '📽️';
-      else if (platform === 'direct') platformBadgeIcon.textContent = '🌐';
-      else platformBadgeIcon.textContent = '🎬';
+      platformBadgeIcon.innerHTML = getPlatformIconSvg(platform, 14);
     }
   }
 
@@ -1026,7 +1096,7 @@ function setTrimTimes(newStart, newEnd, source = 'unknown') {
   // Update Bottom of Audio Wave Selection & Total Bar
   const waveBottomSelectionRange = document.getElementById('waveBottomSelectionRange');
   if (waveBottomSelectionRange) {
-    waveBottomSelectionRange.textContent = `${formatSecondsToTimestamp(start)} ➔ ${formatSecondsToTimestamp(end)}`;
+    waveBottomSelectionRange.textContent = `${formatSecondsToTimestamp(start)} → ${formatSecondsToTimestamp(end)}`;
   }
   const waveBottomDuration = document.getElementById('waveBottomDuration');
   if (waveBottomDuration) {
@@ -1301,17 +1371,12 @@ function updatePlayStateIndicator(state) {
   if (!trimPlayStateIndicator) return;
   const currentCol = document.querySelector('.current-time-col');
   const waveBottomStateBadge = document.getElementById('waveBottomStateBadge');
-  const waveBottomLiveDot = document.getElementById('waveBottomLiveDot');
-
   if (state === 'playing') {
     trimPlayStateIndicator.textContent = 'PLAYING';
     trimPlayStateIndicator.className = 'timing-state-badge playing';
     if (waveBottomStateBadge) {
       waveBottomStateBadge.textContent = 'PLAYING';
       waveBottomStateBadge.className = 'timing-state-badge playing';
-    }
-    if (waveBottomLiveDot) {
-      waveBottomLiveDot.className = 'playback-live-dot playing';
     }
     if (currentCol) currentCol.classList.add('is-playing');
   } else if (state === 'paused') {
@@ -1321,9 +1386,6 @@ function updatePlayStateIndicator(state) {
       waveBottomStateBadge.textContent = 'PAUSED';
       waveBottomStateBadge.className = 'timing-state-badge paused';
     }
-    if (waveBottomLiveDot) {
-      waveBottomLiveDot.className = 'playback-live-dot paused';
-    }
     if (currentCol) currentCol.classList.remove('is-playing');
   } else {
     trimPlayStateIndicator.textContent = 'READY';
@@ -1331,9 +1393,6 @@ function updatePlayStateIndicator(state) {
     if (waveBottomStateBadge) {
       waveBottomStateBadge.textContent = 'READY';
       waveBottomStateBadge.className = 'timing-state-badge';
-    }
-    if (waveBottomLiveDot) {
-      waveBottomLiveDot.className = 'playback-live-dot';
     }
     if (currentCol) currentCol.classList.remove('is-playing');
   }
@@ -1464,7 +1523,7 @@ async function loadAudioBufferInMemory(silent = false) {
   }
   if (waveformLoader) {
     waveformLoader.classList.remove('hidden');
-    if (waveformLoaderText) waveformLoaderText.textContent = '⚡ Streaming & decoding audio waveform in browser RAM...';
+    if (waveformLoaderText) waveformLoaderText.textContent = 'Streaming and decoding audio waveform in browser RAM...';
   }
 
   // Prioritize candidates: Opus first (most reliable decoder across all browsers), then AAC/M4A
@@ -1484,14 +1543,14 @@ async function loadAudioBufferInMemory(silent = false) {
   let lastError = null;
   for (const audioFmt of uniqueCandidates) {
     try {
-      trimmerStatus.textContent = `⏳ Fetching ${audioFmt.qualityLabel} into browser RAM...`;
+      trimmerStatus.textContent = `Fetching ${audioFmt.qualityLabel} into browser RAM...`;
       const streamUrl = audioFmt.streamUrl || `/api/stream?videoId=${currentVideoData.videoId}&itag=${audioFmt.itag}`;
       const response = await fetch(streamUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to stream audio`);
       }
 
-      trimmerStatus.textContent = '⚡ Decoding audio waveform in browser memory...';
+      trimmerStatus.textContent = 'Decoding audio waveform in browser memory...';
       const arrayBuffer = await response.arrayBuffer();
 
       currentDecodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
@@ -1514,9 +1573,9 @@ async function loadAudioBufferInMemory(silent = false) {
       setTrimTimes(parseFloat(startSlider.value), parseFloat(endSlider.value), 'bufferLoaded');
       drawWaveform();
 
-      trimmerStatus.textContent = `✅ Audio ready in memory (${totalDur.toFixed(1)}s). Ready to preview, trim and export!`;
+      trimmerStatus.textContent = `Audio ready in memory (${totalDur.toFixed(1)}s). Ready to preview, trim, and export.`;
       if (!silent) {
-        showToast('Audio waveform loaded & ready in browser RAM!', 'success');
+        showToast('Audio waveform loaded and ready in browser memory', 'success');
       }
       return currentDecodedBuffer;
     } catch (err) {
@@ -1723,7 +1782,7 @@ async function handleTrimExport() {
       throw new Error('Invalid trim range selected');
     }
 
-    trimmerStatus.textContent = '✂️ Slicing audio buffer in browser RAM...';
+    trimmerStatus.textContent = 'Processing audio buffer in browser RAM...';
 
     // Create sliced AudioBuffer in memory
     const trimmedBuffer = audioContext.createBuffer(
@@ -1742,19 +1801,19 @@ async function handleTrimExport() {
 
     if (chosenFormat.startsWith('mp3')) {
       const kbps = parseInt(chosenFormat.split('-')[1] || '320', 10);
-      trimmerStatus.textContent = `🎵 Encoding ${kbps} kbps MP3 directly in browser RAM (LAME Engine)...`;
+      trimmerStatus.textContent = `Encoding ${kbps} kbps MP3 directly in browser RAM (LAME Engine)...`;
       audioBlob = audioBufferToMp3(trimmedBuffer, kbps);
       ext = 'mp3';
     } else if (chosenFormat === 'wav') {
-      trimmerStatus.textContent = '🎼 Encoding 16-bit Lossless WAV Blob in browser RAM...';
+      trimmerStatus.textContent = 'Encoding 16-bit Lossless WAV Blob in browser RAM...';
       audioBlob = audioBufferToWav(trimmedBuffer);
       ext = 'wav';
     } else if (chosenFormat === 'webm') {
-      trimmerStatus.textContent = '🎧 Encoding Opus WebM in browser RAM...';
+      trimmerStatus.textContent = 'Encoding Opus WebM in browser RAM...';
       audioBlob = await audioBufferToMediaBlob(audioContext, trimmedBuffer, 'audio/webm');
       ext = 'webm';
     } else if (chosenFormat === 'm4a') {
-      trimmerStatus.textContent = '📱 Encoding AAC M4A in browser RAM...';
+      trimmerStatus.textContent = 'Encoding AAC M4A in browser RAM...';
       audioBlob = await audioBufferToMediaBlob(audioContext, trimmedBuffer, 'audio/mp4');
       ext = 'm4a';
     } else {
@@ -1778,8 +1837,8 @@ async function handleTrimExport() {
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
     const sizeMB = (audioBlob.size / (1024 * 1024)).toFixed(2);
-    trimmerStatus.textContent = `🎉 Trimmed audio exported as .${ext.toUpperCase()} (${sizeMB} MB) completely in browser memory!`;
-    showToast(`Trimmed ${ext.toUpperCase()} downloaded successfully (${sizeMB} MB)!`, 'success');
+    trimmerStatus.textContent = `Trimmed audio exported as .${ext.toUpperCase()} (${sizeMB} MB) completely in browser memory.`;
+    showToast(`Trimmed ${ext.toUpperCase()} downloaded successfully (${sizeMB} MB)`, 'success');
   } catch (err) {
     showToast(`Export failed: ${err.message}`, 'error');
     trimmerStatus.textContent = `Export error: ${err.message}`;
@@ -1833,7 +1892,7 @@ function loadHistory() {
         <div class="history-info">
           <div class="history-title-text">${item.title}</div>
           <div class="history-sub-text">
-            <span class="history-item-platform ${platformCls}">${item.platformName || 'YouTube'}</span>
+            <span class="history-item-platform ${platformCls}">${getPlatformIconSvg(item.platform || 'youtube', 12)}<span>${item.platformName || 'YouTube'}</span></span>
             <span>${item.author} • ${item.duration}</span>
           </div>
         </div>
@@ -1841,6 +1900,7 @@ function loadHistory() {
       card.addEventListener('click', () => {
         urlInput.value = item.originalUrl || (item.videoId?.length === 11 ? `https://www.youtube.com/watch?v=${item.videoId}` : item.videoId);
         clearBtn.style.display = 'flex';
+        updateInputIcon(urlInput.value);
         fetchVideo(urlInput.value);
       });
       historyList.appendChild(card);
